@@ -27,8 +27,7 @@ colnames(tdata)
 # group by Subtype.ID
 gdata <- group_by(tdata, Subtype.ID) %>% 
   mutate(Subtype_count = n()) %>% # add a column to find count of each Subtype.ID
-  View() %>%
-  filter(count > 1) %>% # filter out the unique subtypes
+  filter(Subtype_count > 1) %>% # filter out the unique subtypes
   group_by(Source) %>%
   mutate(Source_count = n()) %>%
   View() %>%

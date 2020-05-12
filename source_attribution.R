@@ -25,23 +25,16 @@ colnames(tdata)
 # ALSO the chance to use group_by
 
 # group by Subtype.ID
-gdata <- group_by(tdata, Subtype.ID)
+gdata <- group_by(tdata, Subtype.ID) %>% 
+  mutate(Subtype_count = n()) %>% # add a column to find count of each Subtype.ID
+  View() %>%
+  filter(count > 1) %>% # filter out the unique subtypes
+  group_by(Source) %>%
+  mutate(Source_count = n()) %>%
+  View() %>%
+  mutate(prop = 1) # create a column for proportional data based on count??
 
-# add a "count" column to filter out single IDs
-gdata_summary <- mutate(gdata,
-                        count = n())
-                      #  distinct = n_distinct())
-
-# filter out the singular data points
-gdata_filtered <- filter(gdata_summary, count > 1)
-
-# create a column for proportional data based on count??
-gdata_filtered <- mutate(gdata_filtered,
-                         prop = 1) # need to group_by Source. Saving checkpoint in git)
-
-gdata_filtered
-
-fdata <- ungroup(gdata_filtered)
+fdata <- ungroup(gdata)
 
 colnames(fdata)
 

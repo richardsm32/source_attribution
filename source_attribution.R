@@ -25,13 +25,15 @@ colnames(tdata)
 # ALSO the chance to use group_by
 
 # group by Subtype.ID
-gdata <- group_by(tdata, Subtype.ID) %>% 
+gdata <- (group_by(tdata, Subtype.ID) %>% 
   mutate(Subtype_count = n()) %>% # add a column to find count of each Subtype.ID
-  filter(Subtype_count > 1) %>% # filter out the unique subtypes
-  group_by(Source) %>%
+  filter(Subtype_count > 4) %>% # filter out the unique subtypes
+  group_by(Subtype.ID, Source) %>%
   mutate(Source_count = n()) %>%
-  View() %>%
-  mutate(prop = 1) # create a column for proportional data based on count??
+  ungroup %>%
+  View )
+  
+  # mutate(prop = 1) # create a column for proportional data based on count??
 
 fdata <- ungroup(gdata)
 

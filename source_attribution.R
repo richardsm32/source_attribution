@@ -1,7 +1,8 @@
 # Source attribution for Campy Isolates
 library(dplyr)
 library(ggplot2)
-# set a working directory (windows? - maybe switch to check linux)
+library(tidyverse)
+# set a working directory (windows - maybe switch to check linux)
 setwd("C:/Users/richa/Documents/R/source_attribution")
 getwd()
 
@@ -11,33 +12,43 @@ tdata <- tbl_df(data)
 
 colnames(tdata)
 
-# filter the data, removing subtypes only found once
-# can use index positions....
-# perhaps function to see if subtype id is repeated more than once?
-# subset function, duplicated function
+gdata <- group_by(tdata, Subtype.ID) %>%
+  mutate(subtype_count = n()) %>%
+  filter(subtype_count > 4)
 
-# to remove unique Subtype.Id -> a[duplicated(a) | duplicated(a, fromLast=TRUE)]
+gdata <- mutate(gdata, ratio_chicken = 0, ratio_human = 0,
+                 ratio_cattle = 0, ratio_water = 0)
 
-# Notes after finishing plyr and tidyr tutorial
-# Use unique() and potentially include commands like - (negative)
-# select for columns and filter for rows --> I will need filter
-# also convert the df to a data table for better processing
-# ALSO the chance to use group_by
+dim(gdata)[1]
 
-# group by Subtype.ID
-gdata <- (group_by(tdata, Subtype.ID) %>% 
-  mutate(Subtype_count = n()) %>% # add a column to find count of each Subtype.ID
-  filter(Subtype_count > 4) %>% # filter out the unique subtypes
-  group_by(Subtype.ID, Source) %>%
-  mutate(Source_count = n()) %>%
-  ungroup %>%
-  View )
-  
-  # mutate(prop = 1) # create a column for proportional data based on count??
+nrow(gdata)
 
-fdata <- ungroup(gdata)
+for (i in 1:nrow(gdata)) {
+  if (gdata$Source[i] == "Chicken") {
+    gdata$ratio_chicken[i] = 1/gdata$subtype_count[i]
+    
+  } else if (gdata$Source[i] == "Human") {
+    gdata$ratio_human[i] = 1/gdata$subtype_count[i]
+    
+  } else if (gdata$Source[i] == "Cattle") {
+    gdata$ratio_cattle[i] = 1/gdata$subtype_count[i]
+    
+  } else if (gdata$Source[i] == "Water") {
+    gdata$ratio_water[i] = 1/gdata$subtype_count[i]
+    
+  } else {
+    print("Something is wrong, row", i)
+  }
+}
 
-colnames(fdata)
+ggdata <- summarize(gdata, unique(Subtype.ID))
+
+View(ggdata)
+
+View(gdata)
+
+# sort according to proportion of chicken??
+
 
 # create data for each source as proportion of itself -> NO
 

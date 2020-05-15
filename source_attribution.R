@@ -1,7 +1,6 @@
 # Source attribution for Campy Isolates
-library(dplyr)
-library(ggplot2)
 library(tidyverse)
+library(ggthemes)
 # set a working directory (windows - maybe switch to check linux)
 setwd("C:/Users/richa/Documents/R/source_attribution")
 getwd()
@@ -42,51 +41,32 @@ ggdata <- summarize(gdata, unique(Subtype.ID), sum(ratio_chicken),
                     sum(ratio_water))
 
 # sort according to chicken, human, cattle, then water
-ggdata <- arrange(ggdata, desc(ggdata$`sum(ratio_chicken)`),
-                  desc(ggdata$`sum(ratio_human)`),
-                  desc(ggdata$`sum(ratio_cattle)`))
+ggdata <- arrange(ggdata, desc(`sum(ratio_cattle)`),
+                  desc(`sum(ratio_chicken)`),
+                  desc(`sum(ratio_human)`),
+                  desc(`sum(ratio_water)`))
 
 # used as a guide during the data processing, not necessary in final code
-View(ggdata)
+# View(ggdata)
 
-# these methods were attempts to produce only the ratio data
-# to be used in the y-axis
-# ratios produces a list that combines all the columns into one
-# 756 = 189*4
-ratios <- c(ggdata$`sum(ratio_chicken)`, ggdata$`sum(ratio_human)`,
-            ggdata$`sum(ratio_cattle)`, ggdata$`sum(ratio_water)`)
+## Attempting to use pivot to format ggdata
+final_data <- pivot_longer(ggdata, starts_with('sum'),
+                           names_to = "Source", values_to = "Ratio") %>%
+  select(-Subtype.ID) %>%
+  rename(Subtype_ID = `unique(Subtype.ID)`)
 
-# sratios produces a list of 4 lists, each is 189 elements long
-sratios <- c(ggdata[,3:6])
+final_data$Subtype_ID <- as.character(final_data$Subtype_ID)
 
-# this gives the 4 columns in a table form
-tratios <- select(ggdata, starts_with("sum(ratio"))
+final_data <- mutate(final_data, Subtype_ID = factor(
+  Subtype_ID, levels=unique(Subtype_ID)))
 
-View(ratios) # vector with 4*189 results
-View(sratios) # list with length 4, each sub-list is 189
-View(tratios) # 4 columns holding the ratio data in table
 
-# I tried to use the columns/table format in the aes to graph all
-# variable data, but this is not working
+g <- ggplot(final_data, aes(x = Subtype_ID, y = Ratio, fill=Source)) +
+  geom_bar(stat = "identity", width = 0.95) +
+  ggtitle("Source Attribution Analysis") + 
+  theme_economist() +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
+        axis.line.x = element_blank())
 
-g <- ggplot(ggdata, aes(`unique(Subtype.ID)`, tratios)) +
-  geom_bar(position = "fill", stat = "identity") +
-  ggtitle("Source Attribution Analysis") +
-  theme_gray()
-  
 g
-
-
-
-
-
-# Below is junk from previous attempts, I didn't want to trash it yet
-
-### need to plot the subtype ID as x, y is Source/count?
-
-# g <- qplot(Subtype.ID, data = fdata, fill = Source)
-# g
-
-# better attempt, not ready yet
-## g <- ggplot(fdata, aes(x = Subtype.ID, y = prop, fill = source_contribution))
 

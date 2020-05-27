@@ -14,7 +14,7 @@ data <- read_csv("source_attribution_data.csv")
 # than 5 samples. Create ratio columns using mutate()
 data <- group_by(data, Subtype_ID) %>%
   mutate(subtype_count = n()) %>%
-  filter(subtype_count > 4) %>%
+  filter(subtype_count > 24) %>%
   mutate(prop_chicken = 0, prop_human = 0,
          prop_cattle = 0, prop_water = 0,
          human_count = 0, other_count = 0)
@@ -38,15 +38,12 @@ for (i in 1:nrow(data)) {
     print("ERROR, row", i)
   }
 }
-  
 
 # get the unique Subtype.IDs and sum of the source ratios for each
 ggdata <- summarize(data, unique(Subtype_ID), sum(prop_chicken),
                     sum(prop_human), sum(prop_cattle), 
                     sum(prop_water), sum(human_count), 
-                    sum(other_count)) %>%
-  mutate(human_to_others = `sum(human_count)`/
-           (`sum(other_count)`+`sum(human_count)`))
+                    sum(other_count))
 
 # sort according to chicken, human, cattle, then water
 ggdata <- arrange(ggdata, desc(`sum(prop_cattle)`),
@@ -89,7 +86,11 @@ g
 
 # both can be obtained from ggdata...
 # ratio human is already calculated
-# ratio_human vs other is number of human sources vs others
+# ratio_human vs other is number of human sources vs NON-HUMAN
+# ie. if no human --> add to other
+# if human (any) --> count in human
+# ratio is other vs human??? or human vs other??
+# had already done this.
 ## needs to go back a bit farther
 
 

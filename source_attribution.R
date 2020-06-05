@@ -14,58 +14,84 @@ data <- read_csv("source_attribution_data.csv")
 # than 5 samples. Create ratio columns using mutate()
 data <- group_by(data, Subtype_ID) %>%
   mutate(subtype_count = n()) %>%
-  filter(subtype_count > 24) %>%
+  filter(subtype_count > 14) %>%
   mutate(prop_chicken = 0, prop_human = 0,
-         prop_cattle = 0, prop_water = 0,
-         human_count = 0, other_count = 0)
+         prop_cattle = 0, prop_water = 0)
 
 # iterate through the data table and calculate the ratios for each
 # source type. These are in the row for each sample (individual)
 for (i in 1:nrow(data)) {
   if (data$Source[i] == "Chicken") {
     data$prop_chicken[i] = 1/data$subtype_count[i]
-    data$other_count[i] = 1
   } else if (data$Source[i] == "Human") {
     data$prop_human[i] = 1/data$subtype_count[i]
-    data$human_count[i] = 1
   } else if (data$Source[i] == "Cattle") {
     data$prop_cattle[i] = 1/data$subtype_count[i]
-    data$other_count[i] = 1
   } else if (data$Source[i] == "Water") {
     data$prop_water[i] = 1/data$subtype_count[i]
-    data$other_count[i] = 1
   } else {
     print("ERROR, row", i)
   }
 }
 
+# may need quick function to go through the source and select which is dominant
+# and record the ratio --> no because then it's two things....
+
 # get the unique Subtype.IDs and sum of the source ratios for each
-ggdata <- summarize(data, unique(Subtype_ID), sum(prop_chicken),
+data_summary <- summarize(data, unique(Subtype_ID), sum(prop_chicken),
                     sum(prop_human), sum(prop_cattle), 
-                    sum(prop_water), sum(human_count), 
-                    sum(other_count))
+                    sum(prop_water), mean(subtype_count)) %>%
+  mutate(dom_source = 'string', dom_prop = 1)
+
+data_summary <- data_summary %>%
+  select(-Subtype_ID) %>%
+  rename(Subtype_ID = `unique(Subtype_ID)`, sum_chicken = `sum(prop_chicken)`,
+         sum_human = `sum(prop_human)`, sum_cattle = `sum(prop_cattle)`,
+         sum_water = `sum(prop_water)`, repl_subtype = `mean(subtype_count)`)
+
+# this feels pretty sloppy, look at more efficient max algorithm after
+for (i in 1:nrow(data_summary)) {
+  max = 0
+  if (data_summary$sum_cattle[i] >= max) {
+    max <- data_summary$sum_chicken[i]
+    data_summary$dom_source[i] = "Chicken"
+  }
+  if (data_summary$sum_human[i] >= max) {
+    max <- data_summary$sum_human[i]
+    data_summary$dom_source[i] = "Human"
+  } 
+  if (data_summary$sum_cattle[i] >= max) {
+    max <- data_summary$sum_cattle[i]
+    data_summary$dom_source[i] = "Cattle"
+  }
+  if (data_summary$sum_water[i] >= max) {
+    max <- data_summary$sum_water[i]
+    data_summary$dom_source[i] = "Water"
+  }
+  data_summary$dom_prop[i] <- max
+}
 
 # sort according to chicken, human, cattle, then water
-ggdata <- arrange(ggdata, desc(`sum(prop_cattle)`),
-                  desc(`sum(prop_chicken)`),
-                  desc(`sum(prop_human)`),
-                  desc(`sum(prop_water)`))
+data_summary <- arrange(data_summary, desc(sum_cattle),
+                  desc(sum_chicken),
+                  desc(sum_human),
+                  desc(sum_water))
 
 
 # used as a guide during the data processing, not necessary in final code
 # View(ggdata)
 
 ## Attempting to use pivot to format ggdata
-source_prop <- pivot_longer(ggdata, starts_with('sum(prop'),
+source_prop <- pivot_longer(data_summary, starts_with('sum'),
                            names_to = "Source", values_to = "Ratio") %>%
-  select(-Subtype_ID) %>%
-  rename(Subtype_ID = `unique(Subtype_ID)`)
+  select(-dom_source, -dom_prop)
 
 source_prop$Subtype_ID <- as.character(source_prop$Subtype_ID)
 
 source_prop <- mutate(source_prop, Subtype_ID = factor(
   Subtype_ID, levels=unique(Subtype_ID)))
 
+# barplot showing source attribution
 
 g <- ggplot(source_prop, aes(x = Subtype_ID, y = Ratio, fill=Source)) +
   geom_bar(stat = "identity", width = 0.95) +
@@ -76,24 +102,15 @@ g <- ggplot(source_prop, aes(x = Subtype_ID, y = Ratio, fill=Source)) +
 
 g
 
-# Now for the 2nd figure - the assignment
-# >>A bubble graph showing the degree of non-human
-# and human source association among chicken subtypes.
-# In our case, for a bubble graph, we would be 
-# interested in the ratio of human vs other.
-# need proportion of human for y-axis
-# need ratio of human vs. other for x-axis
+# bubble chart
 
-# both can be obtained from ggdata...
-# ratio human is already calculated
-# ratio_human vs other is number of human sources vs NON-HUMAN
-# ie. if no human --> add to other
-# if human (any) --> count in human
-# ratio is other vs human??? or human vs other??
-# had already done this.
-## needs to go back a bit farther
+h <- ggplot(data_summary, aes(x = sum_chicken, y = sum_human,
+                              size = repl_subtype, color = dom_source,
+                              fill = dom_prop)) + 
+  geom_point(alpha = 0.7)
 
+h
 
-
-
+write_csv(source_prop, path = 'source_prop.csv')
+write_csv(data_summary, path = 'data_summary.csv')
 
